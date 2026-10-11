@@ -1,29 +1,39 @@
-name: lasani_digital_album
-description: "Lasani Digital Album - A4 Catalog Maker with PDF Export"
-publish_to: 'none'
-version: 1.0.0+1
+name: Build Lasani Digital Album APK
 
-environment:
-  sdk: '>=3.0.0 <4.0.0'
+on:
+  push:
+    branches: [ main, master ]
 
-dependencies:
-  flutter:
-    sdk: flutter
-  cupertino_icons: ^1.0.6
-  image_picker: ^1.0.7
-  pdf: ^3.10.8
-  printing: ^5.12.0
-  sqflite: ^2.3.2
-  path_provider: ^2.1.2
-  path: ^1.9.0
-  share_plus: ^8.0.2
-  shared_preferences: ^2.2.2
+jobs:
+  build:
+    runs-on: ubuntu-latest
 
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  flutter_lints: ^3.0.0
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-flutter:
-  uses-material-design: true
-  
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.x'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Lasani-Digital-Album-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
+          
