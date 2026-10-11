@@ -153,7 +153,6 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     });
   }
 
-  // Enhanced Bulk Image Picker with Individual Price & Name Editing
   Future<void> _addBulkProducts() async {
     final picker = ImagePicker();
     final pickedFiles = await picker.pickMultiImage();
@@ -162,7 +161,6 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
 
     if (!mounted) return;
 
-    // Loop through each selected image so user can assign separate name and price
     for (int i = 0; i < pickedFiles.length; i++) {
       final nameController = TextEditingController(text: 'Item ${i + 1}');
       final priceController = TextEditingController(text: '0');
@@ -222,7 +220,6 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     _refreshProducts();
   }
 
-  // Edit an existing product's name and price
   Future<void> _editProduct(ProductItem item) async {
     final nameController = TextEditingController(text: item.name);
     final priceController = TextEditingController(text: item.price);
@@ -263,7 +260,6 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     );
   }
 
-  // Optimized PDF Generation for full A4 utilization and proper sizing
   Future<void> _generateAndSharePDF() async {
     final pdf = pw.Document();
 
@@ -508,50 +504,59 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
       appBar: AppBar(title: const Text("Company Settings")),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Column(
-            children: [
-              GestureDetector(
-                onTap: () async {
-                  final img = await ImagePicker().pickImage(source: ImageSource.gallery);
-                  if (img != null) {
-                    setState(() => currentLogo = img.path);
-                  }
-                },
-                child: CircleAvatar(
-                  radius: 50,
-                  backgroundColor: const Color(0xFF4A148C),
-                  backgroundImage: currentLogo != null ? FileImage(File(currentLogo!)) : null,
-                  child: currentLogo == null
-                      ? const Icon(Icons.add_a_photo, color: Colors.white, size: 32)
-                      : null,
-                ),
+        child: Column(
+          children: [
+            GestureDetector(
+              onTap: () async {
+                final img = await ImagePicker().pickImage(source: ImageSource.gallery);
+                if (img != null) {
+                  setState(() => currentLogo = img.path);
+                }
+              },
+              child: CircleAvatar(
+                radius: 50,
+                backgroundColor: const Color(0xFF4A148C),
+                backgroundImage: currentLogo != null ? FileImage(File(currentLogo!)) : null,
+                child: currentLogo == null
+                    ? const Icon(Icons.add_a_photo, color: Colors.white, size: 32)
+                    : null,
               ),
-              const SizedBox(height: 8),
-              const Text("Tap to change company logo", style: TextStyle(color: Colors.grey)),
-              const SizedBox(height: 24),
-              TextField(controller: nameC, decoration: const InputDecoration(labelText: "Company Name", border: OutlineInputBorder())),
-              const SizedBox(height: 16),
-              TextField(controller: phoneC, decoration: const InputDecoration(labelText: "Phone Number", border: OutlineInputBorder())),
-              const SizedBox(height: 16),
-              TextField(controller: addressC, decoration: const InputDecoration(labelText: "Address", border: OutlineInputBorder())),
-              const SizedBox(height: 30),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    final prefs = await SharedPreferences.getInstance();
-                    await prefs.setString('c_name', nameC.text);
-                    await prefs.setString('c_phone', phoneC.text);
-                    await prefs.setString('c_address', addressC.text);
-                    if (currentLogo != null) {
-                      await prefs.setString('c_logo', currentLogo!);
-                    }
-                    widget.onSave();
-                    if (context.mounted) Navigator.pop(context);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4A148C),
-                
+            ),
+            const SizedBox(height: 8),
+            const Text("Tap to change company logo", style: TextStyle(color: Colors.grey)),
+            const SizedBox(height: 24),
+            TextField(controller: nameC, decoration: const InputDecoration(labelText: "Company Name", border: OutlineInputBorder())),
+            const SizedBox(height: 16),
+            TextField(controller: phoneC, decoration: const InputDecoration(labelText: "Phone Number", border: OutlineInputBorder())),
+            const SizedBox(height: 16),
+            TextField(controller: addressC, decoration: const InputDecoration(labelText: "Address", border: OutlineInputBorder())),
+            const SizedBox(height: 30),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: () async {
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setString('c_name', nameC.text);
+                  await prefs.setString('c_phone', phoneC.text);
+                  await prefs.setString('c_address', addressC.text);
+                  if (currentLogo != null) {
+                    await prefs.setString('c_logo', currentLogo!);
+                  }
+                  widget.onSave();
+                  if (context.mounted) Navigator.pop(context);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4A148C),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text("Save Settings", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
