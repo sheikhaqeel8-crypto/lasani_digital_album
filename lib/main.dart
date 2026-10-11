@@ -162,7 +162,6 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
 
     if (!mounted) return;
     
-    // Show a quick dialog to assign a common name/price prefix or save directly
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -337,7 +336,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   clipBehavior: Clip.antiAlias,
                   child: Column(
-                    crossAxisAlignment: ধর্মেরcrossAxisAlignment ?? CrossAxisAlignment.stretch,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Expanded(
                         child: Image.file(File(p.imagePath), fit: BoxFit.cover, errorBuilder: (c, e, s) => const Icon(Icons.broken_image)),
