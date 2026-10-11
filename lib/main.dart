@@ -357,7 +357,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                               ),
                             ),
                             InkWell(
-                              onPressed: () async {
+                              onTap: () async {
                                 if (p.id != null) {
                                   await DatabaseHelper.deleteProduct(p.id!);
                                   _refreshProducts();
