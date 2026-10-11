@@ -24,13 +24,13 @@ class LasaniDigitalAlbumApp extends StatelessWidget {
       title: 'Lasani Digital Album',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primaryColor: const Color(0xFF800020),
+        primaryColor: const Color(0xFF6B11B0),
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF6B11B0),
           primary: const Color(0xFFB31217),
           secondary: const Color(0xFF6B11B0),
         ),
-        scaffoldBackgroundColor: const Color(0xFFFBF8FC),
+        scaffoldBackgroundColor: const Color(0xFFFBFBFC),
         appBarTheme: const AppBarTheme(
           backgroundColor: Color(0xFF6B11B0),
           foregroundColor: Colors.white,
@@ -77,13 +77,13 @@ class DatabaseHelper {
 
   static Future<Database> initDb() async {
     final docsDir = await getApplicationDocumentsDirectory();
-    final path = p.join(docsDir.path, 'lasani_album.db');
+    final path = p.join(docsDir.path, 'lasani_catalog.db');
     return await openDatabase(
       path,
       version: 1,
       onCreate: (db, version) async {
         await db.execute('''
-          CREATE TABLE products(
+          CREATE TABLE products (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT,
             price TEXT,
@@ -94,15 +94,15 @@ class DatabaseHelper {
     );
   }
 
-  static Future<int> insertProduct(ProductItem item) async {
+  static Future<int> insertProduct(ProductItem product) async {
     final db = await database;
-    return await db.insert('products', item.toMap());
+    return await db.insert('products', product.toMap());
   }
 
   static Future<List<ProductItem>> getProducts() async {
     final db = await database;
-    final res = await db.query('products');
-    return res.map((e) => ProductItem.fromMap(e)).toList();
+    final List<Map<String, dynamic>> maps = await db.query('products', orderBy: 'id DESC');
+    return List.generate(maps.length, (i) => ProductItem.fromMap(maps[i]));
   }
 
   static Future<int> deleteProduct(int id) async {
@@ -119,123 +119,75 @@ class MainHomeScreen extends StatefulWidget {
 }
 
 class _MainHomeScreenState extends State<MainHomeScreen> {
-  List<ProductItem> products = [];
-  String companyName = "Lasani Cloth House";
-  String companyPhone = "0300-1234567";
-  String companyAddress = "Main Cloth Market, Rawalpindi";
-  String? logoPath;
+  List<ProductItem> _products = [];
+  String _companyName = 'LV Traders';
+  String _companyPhone = '+92 300 0000000';
+  String _companyAddress = 'Raja Bazar, Rawalpindi';
+  String? _companyLogo;
 
   @override
   void initState() {
     super.initState();
-    _loadCompanySettings();
+    _loadSettings();
     _refreshProducts();
   }
 
-  Future<void> _loadCompanySettings() async {
+  Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      companyName = prefs.getString('c_name') ?? companyName;
-      companyPhone = prefs.getString('c_phone') ?? companyPhone;
-      companyAddress = prefs.getString('c_address') ?? companyAddress;
-      logoPath = prefs.getString('c_logo');
+      _companyName = prefs.getString('c_name') ?? 'LV Traders';
+      _companyPhone = prefs.getString('c_phone') ?? '+92 300 0000000';
+      _companyAddress = prefs.getString('c_address') ?? 'Raja Bazar, Rawalpindi';
+      _companyLogo = prefs.getString('c_logo');
     });
   }
 
   Future<void> _refreshProducts() async {
-    final list = await DatabaseHelper.getProducts();
+    final data = await DatabaseHelper.getProducts();
     setState(() {
-      products = list;
+      _products = data;
     });
   }
 
-  void _showAddProductDialog() {
-    final nameCtrl = TextEditingController();
-    final priceCtrl = TextEditingController();
-    XFile? pickedImg;
+  Future<void> _addProduct() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile == null) return;
 
+    final nameController = TextEditingController();
+    final priceController = TextEditingController();
+
+    if (!mounted) return;
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDlgState) => AlertDialog(
-          title: const Text("نئی پروڈکٹ شامل کریں", style: TextStyle(color: Color(0xFF6B11B0))),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GestureDetector(
-                  onTap: () async {
-                    final img = await ImagePicker().pickImage(source: ImageSource.gallery);
-                    if (img != null) {
-                      setDlgState(() => pickedImg = img);
-                    }
-                  },
-                  child: Container(
-                    height: 120,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.purple.shade50,
-                      border: Border.all(color: const Color(0xFFB31217)),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: pickedImg == null
-                        ? const Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.add_a_photo, color: Color(0xFFB31217), size: 40),
-                              Text("تصویر منتخب کریں"),
-                            ],
-                          )
-                        : Image.file(File(pickedImg!.path), fit: BoxFit.cover),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(labelText: "پروڈکٹ کا نام"),
-                ),
-                TextField(
-                  controller: priceCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: "قیمت (Rs.)"),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("کینسل")),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFB31217)),
-              onPressed: () async {
-                if (nameCtrl.text.isNotEmpty && priceCtrl.text.isNotEmpty && pickedImg != null) {
-                  await DatabaseHelper.insertProduct(ProductItem(
-                    name: nameCtrl.text,
-                    price: priceCtrl.text,
-                    imagePath: pickedImg!.path,
-                  ));
-                  Navigator.pop(ctx);
-                  _refreshProducts();
-                }
-              },
-              child: const Text("سیو کریں", style: TextStyle(color: Colors.white)),
-            )
+      builder: (context) => AlertDialog(
+        title: const Text('پروڈکٹ شامل کریں'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'نام/کوڈ')),
+            TextField(controller: priceController, decoration: const InputDecoration(labelText: 'قیمت')),
           ],
         ),
-      ),
-    );
-  }
-
-  void _openSettingsScreen() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => CompanySettingsScreen(
-          name: companyName,
-          phone: companyPhone,
-          address: companyAddress,
-          logo: logoPath,
-          onSave: _loadCompanySettings,
-        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('منسوخ')),
+          ElevatedButton(
+            onPressed: () async {
+              if (nameController.text.isNotEmpty) {
+                await DatabaseHelper.insertProduct(
+                  ProductItem(
+                    name: nameController.text,
+                    price: priceController.text,
+                    imagePath: pickedFile.path,
+                  ),
+                );
+                if (context.mounted) Navigator.pop(context);
+                _refreshProducts();
+              }
+            },
+            child: const Text('محفوظ کریں'),
+          ),
+        ],
       ),
     );
   }
@@ -243,215 +195,161 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   Future<void> _generateAndSharePDF() async {
     final pdf = pw.Document();
 
-    pw.MemoryImage? logoImg;
-    if (logoPath != null && File(logoPath!).existsSync()) {
-      logoImg = pw.MemoryImage(File(logoPath!).readAsBytesSync());
+    pw.MemoryImage? logoImage;
+    if (_companyLogo != null && File(_companyLogo!).existsSync()) {
+      logoImage = pw.MemoryImage(File(_companyLogo!).readAsBytesSync());
     }
 
-    // A4 12 items grid calculation
-    int totalPages = (products.length / 12).ceil();
-    if (totalPages == 0) totalPages = 1;
+    List<pw.Widget> productWidgets = [];
+    for (var item in _products) {
+      pw.MemoryImage? img;
+      if (File(item.imagePath).existsSync()) {
+        img = pw.MemoryImage(File(item.imagePath).readAsBytesSync());
+      }
 
-    for (int p = 0; p < totalPages; p++) {
-      int start = p * 12;
-      int end = (start + 12 < products.length) ? start + 12 : products.length;
-      List<ProductItem> pageProducts = products.sublist(start, end);
-
-      pdf.addPage(
-        pw.Page(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(20),
-          build: (pw.Context context) {
-            return pw.Column(
-              children: [
-                // Header
-                pw.Row(
-                  main: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    if (logoImg != null)
-                      pw.Container(width: 50, height: 50, child: pw.Image(logoImg))
-                    else
-                      pw.SizedBox(width: 50),
-                    pw.Column(
-                      children: [
-                        pw.Text(companyName, style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, color: PdfColors.purple900)),
-                        pw.Text(companyAddress, style: const pw.TextStyle(fontSize: 10)),
-                        pw.Text("Ph: $companyPhone", style: const pw.TextStyle(fontSize: 10, color: PdfColors.red900)),
-                      ],
-                    ),
-                    pw.SizedBox(width: 50),
-                  ],
-                ),
-                pw.Divider(thickness: 1, color: PdfColors.red),
-                pw.SizedBox(height: 10),
-
-                // 12 Items Grid Layout
-                pw.Expanded(
-                  child: pw.GridView(
-                    crossAxisCount: 3,
-                    childAspectRatio: 0.75,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
-                    children: List.generate(12, (index) {
-                      if (index < pageProducts.length) {
-                        final item = pageProducts[index];
-                        final imgFile = File(item.imagePath);
-                        pw.MemoryImage? itemImg;
-                        if (imgFile.existsSync()) {
-                          itemImg = pw.MemoryImage(imgFile.readAsBytesSync());
-                        }
-
-                        return pw.Container(
-                          padding: const pw.EdgeInsets.all(5),
-                          decoration: pw.BoxDecoration(
-                            border: pw.Border.all(color: PdfColors.purple200),
-                            borderRadius: pw.BorderRadius.circular(6),
-                          ),
-                          child: pw.Column(
-                            children: [
-                              pw.Expanded(
-                                child: itemImg != null
-                                    ? pw.Image(itemImg, fit: pw.BoxFit.cover)
-                                    : pw.Container(color: PdfColors.grey200),
-                              ),
-                              pw.SizedBox(height: 4),
-                              pw.Text(item.name, style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
-                              pw.Text("Rs. ${item.price}", style: pw.TextStyle(fontSize: 9, color: PdfColors.red800, fontWeight: pw.FontWeight.bold)),
-                            ],
-                          ),
-                        );
-                      } else {
-                        // Empty slot placeholder
-                        return pw.Container(
-                          decoration: pw.BoxDecoration(
-                            border: pw.Border.all(color: PdfColors.grey300, style: pw.BorderStyle.dashed),
-                            borderRadius: pw.BorderRadius.circular(6),
-                          ),
-                        );
-                      }
-                    }),
-                  ),
-                ),
-                pw.Text("Generated by Lasani Digital Album", style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey)),
-              ],
-            );
-          },
+      productWidgets.add(
+        pw.Container(
+          decoration: pw.BoxDecoration(
+            border: pw.Border.all(color: PdfColors.grey300),
+            borderRadius: pw.BorderRadius.circular(6),
+          ),
+          padding: const pw.EdgeInsets.all(6),
+          child: pw.Column(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              img != null
+                  ? pw.Expanded(child: pw.Image(img, fit: pw.BoxFit.contain))
+                  : pw.Container(height: 80, color: PdfColors.grey200),
+              pw.SizedBox(height: 4),
+              pw.Text(item.name, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+              pw.Text('Rs. ${item.price}', style: const pw.TextStyle(color: PdfColors.red900, fontSize: 9)),
+            ],
+          ),
         ),
       );
     }
 
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(20),
+        header: (context) => pw.Container(
+          padding: const pw.EdgeInsets.bottom(10),
+          decoration: const pw.BoxDecoration(border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey400))),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(_companyName, style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex('6B11B0'))),
+                  pw.Text(_companyAddress, style: const pw.TextStyle(fontSize: 9)),
+                  pw.Text(_companyPhone, style: const pw.TextStyle(fontSize: 9)),
+                ],
+              ),
+              if (logoImage != null) pw.Container(height: 40, width: 40, child: pw.Image(logoImage)),
+            ],
+          ),
+        ),
+        build: (context) => [
+          pw.SizedBox(height: 10),
+          pw.GridView(
+            crossAxisCount: 3,
+            childAspectRatio: 0.8,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
+            children: productWidgets,
+          ),
+        ],
+      ),
+    );
+
     final output = await getTemporaryDirectory();
-    final file = File("${output.path}/lasani_catalog.pdf");
+    final file = File('${output.path}/Lasani_Catalog.pdf');
     await file.writeAsBytes(await pdf.save());
 
-    await Share.shareXFiles([XFile(file.path)], text: '$companyName - Digital Catalog');
+    await Share.shareXFiles([XFile(file.path)], text: 'Lasani Digital Album Catalog');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("لسانی ڈیجیٹل البم", style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(_companyName),
         actions: [
-          IconButton(icon: const Icon(Icons.settings), onPressed: _openSettingsScreen),
-        ],
-      ),
-      body: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            color: const Color(0xFF6B11B0).withOpacity(0.08),
-            child: Row(
-              children: [
-                logoPath != null && File(logoPath!).existsSync()
-                    ? CircleAvatar(backgroundImage: FileImage(File(logoPath!)), radius: 25)
-                    : const CircleAvatar(backgroundColor: Color(0xFFB31217), radius: 25, child: Icon(Icons.business, color: Colors.white)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: Cross-AxisAlignment.start,
-                    children: [
-                      Text(companyName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text("$companyAddress | $companyPhone", style: const TextStyle(fontSize: 12, color: Colors.black54)),
-                    ],
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CompanySettingsScreen(
+                    name: _companyName,
+                    phone: _companyPhone,
+                    address: _companyAddress,
+                    logo: _companyLogo,
+                    onSave: _loadSettings,
                   ),
                 ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: products.isEmpty
-                ? const Center(child: Text("کوئی پروڈکٹ موجود نہیں۔ نچلے بٹن سے شامل کریں!"))
-                : GridView.builder(
-                    padding: const EdgeInsets.all(10),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      childAspectRatio: 0.72,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                    ),
-                    itemCount: products.length,
-                    itemBuilder: (ctx, i) {
-                      final item = products[i];
-                      return Stack(
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.purple.shade100),
-                              boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
-                            ),
-                            child: Column(
-                              children: [
-                                Expanded(
-                                  child: ClipRRect(
-                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-                                    child: Image.file(File(item.imagePath), fit: BoxFit.cover, width: double.infinity),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(4.0),
-                                  child: Column(
-                                    children: [
-                                      Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
-                                      Text("Rs. ${item.price}", style: const TextStyle(color: Color(0xFFB31217), fontWeight: FontWeight.bold, fontSize: 11)),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Positioned(
-                            top: 2,
-                            right: 2,
-                            child: InkWell(
-                              onTap: () async {
-                                await DatabaseHelper.deleteProduct(item.id!);
-                                _refreshProducts();
-                              },
-                              child: const CircleAvatar(
-                                radius: 12,
-                                backgroundColor: Colors.red,
-                                child: Icon(Icons.close, size: 14, color: Colors.white),
-                              ),
-                            ),
-                          )
-                        ],
-                      );
-                    },
-                  ),
-          ),
+              );
+            },
+          )
         ],
       ),
+      body: _products.isEmpty
+          ? const Center(child: Text('کوئی پروڈکٹ موجود نہیں ہے۔ نیچے بٹن پر کلک کر کے شامل کریں۔'))
+          : GridView.builder(
+              padding: const EdgeInsets.all(10),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 0.75,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+              ),
+              itemCount: _products.length,
+              itemBuilder: (context, index) {
+                final p = _products[index];
+                return Card(
+                  elevation: 2,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: Image.file(File(p.imagePath), fit: BoxFit.cover, errorBuilder: (c, e, s) => const Icon(Icons.image)),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(p.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                            Text('Rs. ${p.price}', style: const TextStyle(color: Color(0xFFB31217))),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () async {
+                          if (p.id != null) {
+                            await DatabaseHelper.deleteProduct(p.id!);
+                            _refreshProducts();
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          FloatingActionButton(
+          FloatingActionButton.extended(
             heroTag: "add",
             backgroundColor: const Color(0xFFB31217),
-            onPressed: _showAddProductDialog,
-            child: const Icon(Icons.add, color: Colors.white),
+            onPressed: _addProduct,
+            icon: const Icon(Icons.add, color: Colors.white),
+            label: const Text("آئٹم شامل کریں", style: TextStyle(color: Colors.white)),
           ),
           const SizedBox(height: 10),
           FloatingActionButton.extended(
@@ -533,8 +431,27 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
               const SizedBox(height: 20),
               TextField(controller: nameC, decoration: const InputDecoration(labelText: "کمپنی کا نام")),
               TextField(controller: phoneC, decoration: const InputDecoration(labelText: "فون نمبر")),
-              TextField(controller: addressC, decoration: const InputDecoration(labelText: "ایڈریس")),
+              TextField(controller: addressC, decoration: const InputDecoration(labelText: "پتہ")),
               const SizedBox(height: 30),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  b
+                onPressed: () async {
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setString('c_name', nameC.text);
+                  await prefs.setString('c_phone', phoneC.text);
+                  await prefs.setString('c_address', addressC.text);
+                  if (currentLogo != null) {
+                    await prefs.setString('c_logo', currentLogo!);
+                  }
+                  widget.onSave();
+                  if (context.mounted) Navigator.pop(context);
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF6B11B0)),
+                child: const Text("سیٹنگز محفوظ کریں", style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
