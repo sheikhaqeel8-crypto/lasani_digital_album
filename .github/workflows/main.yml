@@ -31,15 +31,19 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Generate App Icon
+      - name: Generate App Icon & App Name
         run: flutter pub run flutter_launcher_icons:main
 
-      - name: Build APK
-        run: flutter build apk --release
+      - name: Build APK with Consistent Debug Key
+        run: flutter build apk --debug
+
+      - name: Rename APK File
+        run: |
+          mv build/app/outputs/flutter-apk/app-debug.apk build/app/outputs/flutter-apk/Lasani-Digital-Album.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Lasani-Digital-Album-APK
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: build/app/outputs/flutter-apk/Lasani-Digital-Album.apk
           
