@@ -24,17 +24,18 @@ class LasaniDigitalAlbumApp extends StatelessWidget {
       title: 'Lasani Digital Album',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primaryColor: const Color(0xFF6B11B0),
+        useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF6B11B0),
-          primary: const Color(0xFFB31217),
-          secondary: const Color(0xFF6B11B0),
+          seedColor: const Color(0xFF4A148C),
+          primary: const Color(0xFF4A148C),
+          secondary: const Color(0xFFB71C1C),
         ),
-        scaffoldBackgroundColor: const Color(0xFFFBFBFC),
+        scaffoldBackgroundColor: const Color(0xFFF5F7FA),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF6B11B0),
+          backgroundColor: Color(0xFF4A148C),
           foregroundColor: Colors.white,
           centerTitle: true,
+          elevation: 2,
         ),
       ),
       home: const MainHomeScreen(),
@@ -149,43 +150,49 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     });
   }
 
-  Future<void> _addProduct() async {
+  // Bulk Image Picker Implementation
+  Future<void> _addBulkProducts() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile == null) return;
+    final pickedFiles = await picker.pickMultiImage();
+    
+    if (pickedFiles.isEmpty) return;
 
-    final nameController = TextEditingController();
-    final priceController = TextEditingController();
+    final nameController = TextEditingController(text: 'Item');
+    final priceController = TextEditingController(text: '0');
 
     if (!mounted) return;
-    showDialog(
+    
+    // Show a quick dialog to assign a common name/price prefix or save directly
+    await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('پروڈکٹ شامل کریں'),
+        title: Text('Add ${pickedFiles.length} Images'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'نام/کوڈ')),
-            TextField(controller: priceController, decoration: const InputDecoration(labelText: 'قیمت')),
+            const Text('Enter default title and price for these items:'),
+            const SizedBox(height: 10),
+            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Default Title/Code')),
+            TextField(controller: priceController, decoration: const InputDecoration(labelText: 'Default Price')),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('منسوخ')),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () async {
-              if (nameController.text.isNotEmpty) {
+              for (int i = 0; i < pickedFiles.length; i++) {
                 await DatabaseHelper.insertProduct(
                   ProductItem(
-                    name: nameController.text,
+                    name: '${nameController.text} ${i + 1}',
                     price: priceController.text,
-                    imagePath: pickedFile.path,
+                    imagePath: pickedFiles[i].path,
                   ),
                 );
-                if (context.mounted) Navigator.pop(context);
-                _refreshProducts();
               }
+              if (context.mounted) Navigator.pop(context);
+              _refreshProducts();
             },
-            child: const Text('محفوظ کریں'),
+            child: const Text('Save All'),
           ),
         ],
       ),
@@ -211,7 +218,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
         pw.Container(
           decoration: pw.BoxDecoration(
             border: pw.Border.all(color: PdfColors.grey300),
-            borderRadius: pw.BorderRadius.circular(6),
+            borderRadius: pw.BorderRadius.circular(8),
           ),
           padding: const pw.EdgeInsets.all(6),
           child: pw.Column(
@@ -242,7 +249,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
               pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  pw.Text(_companyName, style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex('6B11B0'))),
+                  pw.Text(_companyName, style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex('4A148C'))),
                   pw.Text(_companyAddress, style: const pw.TextStyle(fontSize: 9)),
                   pw.Text(_companyPhone, style: const pw.TextStyle(fontSize: 9)),
                 ],
@@ -297,44 +304,70 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
         ],
       ),
       body: _products.isEmpty
-          ? const Center(child: Text('کوئی پروڈکٹ موجود نہیں ہے۔ نیچے بٹن پر کلک کر کے شامل کریں۔'))
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.photo_library_outlined, size: 80, color: Colors.grey),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'No products added yet.\nTap below to select multiple images from gallery!',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+            )
           : GridView.builder(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(12),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 childAspectRatio: 0.75,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
               ),
               itemCount: _products.length,
               itemBuilder: (context, index) {
                 final p = _products[index];
                 return Card(
-                  elevation: 2,
+                  elevation: 3,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  clipBehavior: Clip.antiAlias,
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    crossAxisAlignment: ধর্মেরcrossAxisAlignment ?? CrossAxisAlignment.stretch,
                     children: [
                       Expanded(
-                        child: Image.file(File(p.imagePath), fit: BoxFit.cover, errorBuilder: (c, e, s) => const Icon(Icons.image)),
+                        child: Image.file(File(p.imagePath), fit: BoxFit.cover, errorBuilder: (c, e, s) => const Icon(Icons.broken_image)),
                       ),
-                      Padding(
+                      Container(
                         padding: const EdgeInsets.all(8.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        color: Colors.white,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(p.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            Text('Rs. ${p.price}', style: const TextStyle(color: Color(0xFFB31217))),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(p.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                  Text('Rs. ${p.price}', style: const TextStyle(color: Color(0xFFB71C1C), fontSize: 12, fontWeight: FontWeight.w600)),
+                                ],
+                              ),
+                            ),
+                            InkWell(
+                              onPressed: () async {
+                                if (p.id != null) {
+                                  await DatabaseHelper.deleteProduct(p.id!);
+                                  _refreshProducts();
+                                }
+                              },
+                              child: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                            ),
                           ],
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () async {
-                          if (p.id != null) {
-                            await DatabaseHelper.deleteProduct(p.id!);
-                            _refreshProducts();
-                          }
-                        },
                       ),
                     ],
                   ),
@@ -345,19 +378,19 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           FloatingActionButton.extended(
-            heroTag: "add",
-            backgroundColor: const Color(0xFFB31217),
-            onPressed: _addProduct,
-            icon: const Icon(Icons.add, color: Colors.white),
-            label: const Text("آئٹم شامل کریں", style: TextStyle(color: Colors.white)),
+            heroTag: "bulk_add",
+            backgroundColor: const Color(0xFFB71C1C),
+            onPressed: _addBulkProducts,
+            icon: const Icon(Icons.library_add, color: Colors.white),
+            label: const Text("Add Bulk Images", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           FloatingActionButton.extended(
-            heroTag: "share",
-            backgroundColor: const Color(0xFF6B11B0),
+            heroTag: "share_pdf",
+            backgroundColor: const Color(0xFF4A148C),
             onPressed: _generateAndSharePDF,
             icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
-            label: const Text("A4 PDF بنائیں", style: TextStyle(color: Colors.white)),
+            label: const Text("Export A4 PDF Catalog", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -404,36 +437,40 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("کمپنی کی سیٹنگز")),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              GestureDetector(
-                onTap: () async {
-                  final img = await ImagePicker().pickImage(source: ImageSource.gallery);
-                  if (img != null) {
-                    setState(() => currentLogo = img.path);
-                  }
-                },
-                child: CircleAvatar(
-                  radius: 45,
-                  backgroundColor: const Color(0xFF6B11B0),
-                  backgroundImage: currentLogo != null ? FileImage(File(currentLogo!)) : null,
-                  child: currentLogo == null
-                      ? const Icon(Icons.add_a_photo, color: Colors.white, size: 30)
-                      : null,
-                ),
+      appBar: AppBar(title: const Text("Company Settings")),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          children: [
+            GestureDetector(
+              onTap: () async {
+                final img = await ImagePicker().pickImage(source: ImageSource.gallery);
+                if (img != null) {
+                  setState(() => currentLogo = img.path);
+                }
+              },
+              child: CircleAvatar(
+                radius: 50,
+                backgroundColor: const Color(0xFF4A148C),
+                backgroundImage: currentLogo != null ? FileImage(File(currentLogo!)) : null,
+                child: currentLogo == null
+                    ? const Icon(Icons.add_a_photo, color: Colors.white, size: 32)
+                    : null,
               ),
-              const SizedBox(height: 8),
-              const Text("لوگو تبدیل کرنے کے لیے ٹیپ کریں"),
-              const SizedBox(height: 20),
-              TextField(controller: nameC, decoration: const InputDecoration(labelText: "کمپنی کا نام")),
-              TextField(controller: phoneC, decoration: const InputDecoration(labelText: "فون نمبر")),
-              TextField(controller: addressC, decoration: const InputDecoration(labelText: "پتہ")),
-              const SizedBox(height: 30),
-              ElevatedButton(
+            ),
+            const SizedBox(height: 8),
+            const Text("Tap to change company logo", style: TextStyle(color: Colors.grey)),
+            const SizedBox(height: 24),
+            TextField(controller: nameC, decoration: const InputDecoration(labelText: "Company Name", border: OutlineInputBorder())),
+            const SizedBox(height: 16),
+            TextField(controller: phoneC, decoration: const InputDecoration(labelText: "Phone Number", border: OutlineInputBorder())),
+            const SizedBox(height: 16),
+            TextField(controller: addressC, decoration: const InputDecoration(labelText: "Address", border: OutlineInputBorder())),
+            const SizedBox(height: 30),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
                 onPressed: () async {
                   final prefs = await SharedPreferences.getInstance();
                   await prefs.setString('c_name', nameC.text);
@@ -445,11 +482,15 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
                   widget.onSave();
                   if (context.mounted) Navigator.pop(context);
                 },
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF6B11B0)),
-                child: const Text("سیٹنگز محفوظ کریں", style: TextStyle(color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4A148C),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text("Save Settings", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
