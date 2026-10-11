@@ -234,7 +234,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(20),
         header: (context) => pw.Container(
-          padding: const pw.EdgeInsets.bottom(10),
+          padding: const pw.EdgeInsets.only(bottom: 10),
           decoration: const pw.BoxDecoration(border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey400))),
           child: pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
